@@ -1,0 +1,8 @@
+---
+  KeystoneBasic.create_and_list_tenants:
+    -
+      args: {}
+      runner:
+        type: "constant"
+        times: 10
+        concurrency: 1

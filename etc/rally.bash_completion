@@ -1,0 +1,90 @@
+#!/bin/bash
+
+# Standalone _filedir() alternative.
+# This exempts from dependence of bash completion routines
+function _rally_filedir()
+{
+    test "${1}" \
+        && COMPREPLY=( \
+            $(compgen -f -- "${cur}" | grep -E "${1}") \
+            $(compgen -o plusdirs -- "${cur}") ) \
+        || COMPREPLY=( \
+            $(compgen -o plusdirs -f -- "${cur}") \
+            $(compgen -d -- "${cur}") )
+}
+
+_rally()
+{
+    declare -A SUBCOMMANDS
+    declare -A OPTS
+
+    OPTS["deployment_check"]="--deployment"
+    OPTS["deployment_config"]="--deployment"
+    OPTS["deployment_create"]="--name --fromenv --filename --no-use"
+    OPTS["deployment_destroy"]="--deployment"
+    OPTS["deployment_list"]=""
+    OPTS["deployment_recreate"]="--deployment"
+    OPTS["deployment_show"]="--deployment"
+    OPTS["deployment_use"]="--deployment"
+    OPTS["info_find"]="--query"
+    OPTS["info_list"]=""
+    OPTS["plugin_list"]="--name --namespace"
+    OPTS["plugin_show"]="--name --namespace"
+    OPTS["show_flavors"]="--deployment"
+    OPTS["show_images"]="--deployment"
+    OPTS["show_keypairs"]="--deployment"
+    OPTS["show_networks"]="--deployment"
+    OPTS["show_secgroups"]="--deployment"
+    OPTS["task_abort"]="--uuid --soft"
+    OPTS["task_delete"]="--force --uuid"
+    OPTS["task_detailed"]="--uuid --iterations-data"
+    OPTS["task_list"]="--deployment --all-deployments --status --uuids-only"
+    OPTS["task_report"]="--tasks --out --open --html --html-static --junit"
+    OPTS["task_results"]="--uuid"
+    OPTS["task_sla_check"]="--uuid --json"
+    OPTS["task_start"]="--deployment --task --task-args --task-args-file --tag --no-use --abort-on-sla-failure"
+    OPTS["task_status"]="--uuid"
+    OPTS["task_use"]="--uuid"
+    OPTS["task_validate"]="--deployment --task --task-args --task-args-file"
+    OPTS["verify_compare"]="--uuid-1 --uuid-2 --csv --html --json --output-file --threshold"
+    OPTS["verify_detailed"]="--uuid --sort-by"
+    OPTS["verify_genconfig"]="--deployment --tempest-config --override"
+    OPTS["verify_import"]="--deployment --set --file --no-use"
+    OPTS["verify_install"]="--deployment --source --system-wide"
+    OPTS["verify_list"]=""
+    OPTS["verify_reinstall"]="--deployment --tempest-config --source --system-wide"
+    OPTS["verify_results"]="--uuid --html --json --output-file"
+    OPTS["verify_show"]="--uuid --sort-by --detailed"
+    OPTS["verify_showconfig"]="--deployment"
+    OPTS["verify_start"]="--deployment --set --regex --tests-file --tempest-config --xfails-file --no-use --system-wide --concurrency"
+    OPTS["verify_uninstall"]="--deployment"
+    OPTS["verify_use"]="--uuid"
+
+    for OPT in ${!OPTS[*]} ; do
+        CMD=${OPT%%_*}
+        CMDSUB=${OPT#*_}
+        SUBCOMMANDS[${CMD}]+="${CMDSUB} "
+    done
+
+    COMMANDS="${!SUBCOMMANDS[*]}"
+    COMPREPLY=()
+
+    local cur="${COMP_WORDS[COMP_CWORD]}"
+    local prev="${COMP_WORDS[COMP_CWORD-1]}"
+
+    if [[ $cur =~ ^(\.|\~|\/) ]] || [[ $prev =~ ^--out(|put-file)$ ]] ; then
+        _rally_filedir
+    elif [[ $prev =~ ^--(task|filename)$ ]] ; then
+        _rally_filedir "\.json|\.yaml|\.yml"
+    elif [ $COMP_CWORD == "1" ] ; then
+        COMPREPLY=($(compgen -W "$COMMANDS" -- ${cur}))
+    elif [ $COMP_CWORD == "2" ] ; then
+        COMPREPLY=($(compgen -W "${SUBCOMMANDS[${prev}]}" -- ${cur}))
+    else
+        COMMAND="${COMP_WORDS[1]}_${COMP_WORDS[2]}"
+        COMPREPLY=($(compgen -W "${OPTS[$COMMAND]}" -- ${cur}))
+    fi
+    return 0
+}
+
+complete -o filenames -F _rally rally
